@@ -84,18 +84,20 @@ View(mushroom)
 
 # ===========================================================================
 # Separação do dataset em treino e test com o target desbalanceado
+train_p <- 0.8
 set.seed(42)
-trainsamples <- createDataPartition(y = mushroom$target, p = 0.8, list = FALSE)
-train_mushroom <- mushroom[ trainsamples, ]
-test_mushroom  <- mushroom[-trainsamples, ]
-table(train_mushroom$target)
-table(test_mushroom$target)
-# **********************************
-# Fazer separação de X e y para train e test
+index <- createDataPartition(y = mushroom$target, p = train_p, list = FALSE, times = 1)
+train_data <- mushroom[index, ]
+test_data <- mushroom[-index, ]
+
+X_train <- train_data[, -ncol(train_data)]
+y_train <- train_data$target
+X_test <- test_data[, -ncol(test_data)]
+y_test <- test_data$target
 
 # ===========================================================================
 # Controle dos parâmetros para o treino
-fitControl <- trainControl(method = "cv", number = 10)
+# fitControl <- trainControl(method = "cv", number = 10)
 
 # ===========================================================================
 # Funções úteis
@@ -127,6 +129,6 @@ modelprint <- function(model, test_data) {
 
 # ============================================================================
 # Redes MLP
-# ****************************
-# Aplicar modelos
-
+nn <- nnet(target ~ ., data = train_data, size = 5, maxit = 500)
+# aparecendo erro aqui
+preds = predict(nn,train_data,type = "class")
