@@ -2,7 +2,7 @@
 suppressPackageStartupMessages(for (package in c('caret','readr','ggplot2',
                                                  'dplyr','corrplot','rpart',
                                                  'rpart.plot','randomForest',
-                                                 'utils', 'map_dbl')) {
+                                                 'utils')) {
   if (!require(package, character.only=T, quietly=T)) {
     install.packages(package)
     library(package,character.only=T)
@@ -90,6 +90,8 @@ train_mushroom <- mushroom[ trainsamples, ]
 test_mushroom  <- mushroom[-trainsamples, ]
 table(train_mushroom$target)
 table(test_mushroom$target)
+# **********************************
+# Fazer separação de X e y para train e test
 
 # ===========================================================================
 # Controle dos parâmetros para o treino
@@ -125,4 +127,6 @@ modelprint <- function(model, test_data) {
 
 # ============================================================================
 # Redes MLP
+# ****************************
+# Aplicar modelos
 
