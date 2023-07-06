@@ -2,7 +2,7 @@
 suppressPackageStartupMessages(for (package in c('caret','readr','ggplot2',
                                                  'dplyr','corrplot','rpart',
                                                  'rpart.plot','randomForest',
-                                                 'utils')) {
+                                                 'utils','e1071','nnet')) {
   if (!require(package, character.only=T, quietly=T)) {
     install.packages(package)
     library(package,character.only=T)
@@ -149,6 +149,7 @@ matrix_conf = table(preds_teste, test_data$target)
 acertos = diag(as.matrix(matrix_conf))
 
 acc_test = sum(acertos)/length(preds_teste)
+
 # ============================================================================
 # SVM
 model_svm <- svm(target ~.,data=train_data, cost=10,gamma = 0.0001,type = "C-classification")
