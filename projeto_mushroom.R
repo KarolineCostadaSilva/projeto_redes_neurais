@@ -129,6 +129,44 @@ modelprint <- function(model, test_data) {
 
 # ============================================================================
 # Redes MLP
+train_data$target = as.factor(train_data$target)
+
+
 nn <- nnet(target ~ ., data = train_data, size = 5, maxit = 500)
-# aparecendo erro aqui
-preds = predict(nn,train_data,type = "class")
+# Calcular a acurária do treino
+preds_train = predict(nn,train_data,type = "class")
+# Calcular a acurácia do teste
+preds_teste = predict(nn,test_data,type = "class")
+# Train
+matrix_conf = table(preds_train, train_data$target)
+
+acertos = diag(as.matrix(matrix_conf))
+
+acc_train = sum(acertos)/length(preds_train)
+# Test
+matrix_conf = table(preds_teste, test_data$target)
+
+acertos = diag(as.matrix(matrix_conf))
+
+acc_test = sum(acertos)/length(preds_teste)
+# ============================================================================
+# SVM
+model_svm <- svm(target ~.,data=train_data, cost=10,gamma = 0.0001,type = "C-classification")
+
+# Calcular a acurária do treino
+preds_train_svm <- predict(model_svm, train_data)
+# Calcular a acurária do teste
+preds_test_svm = predict(model_svm,test_data)
+
+# Train
+matrix_conf_train_svm <- table(preds_train_svm, train_data$target)
+acertos_svm_train <- diag(as.matrix(matrix_conf_train_svm))
+acc_train_svm <- sum(acertos_svm_train)/length(preds_train_svm)
+
+# Test
+matrix_conf_test_svm = table(preds_test_svm, test_data$target)
+acertos_svm_test = diag(as.matrix(matrix_conf_test_svm))
+acc_test_svm = sum(acertos_svm_test)/length(preds_test_svm)
+# ============================================================================
+# Interpretação dos modelos
+# 
