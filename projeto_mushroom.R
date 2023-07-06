@@ -131,7 +131,6 @@ modelprint <- function(model, test_data) {
 # Redes MLP
 train_data$target = as.factor(train_data$target)
 
-
 nn <- nnet(target ~ ., data = train_data, size = 5, maxit = 500)
 # Calcular a acurária do treino
 preds_train = predict(nn,train_data,type = "class")
@@ -151,6 +150,8 @@ acertos = diag(as.matrix(matrix_conf))
 acc_test = sum(acertos)/length(preds_teste)
 
 # ============================================================================
+# Adicionar mais valores de custo e gamma para verificar qual melhor hiperparâmetro
+
 # SVM
 model_svm <- svm(target ~.,data=train_data, cost=10,gamma = 0.0001,type = "C-classification")
 
