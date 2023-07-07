@@ -120,34 +120,36 @@ modelprint <- function(model, test_data) {
   print("=========================================")
   print(model)
   print("=========================================")
-  print(varImp(model))
+  print(varImp(model$net))
   print("=========================================")
-  print(confusionMatrix(data = predict(model, newdata = test_data), test_data$target, positive='poisonous'))
+  predictions <- predict(model, newdata = test_data, type = "class")
+  print(confusionMatrix(data = predictions, reference = test_data$target, positive='poisonous'))
   print("=========================================")
-  plotROC(test_data$target, predict(model, test_data))
+  plotROC(test_data$target, predictions)
 }
 
 # ============================================================================
 # Redes MLP
-train_data$target = as.factor(train_data$target)
+train_data$target <- as.factor(train_data$target)
+test_data$target <- as.factor(test_data$target)
 
 nn <- nnet(target ~ ., data = train_data, size = 5, maxit = 500)
 # Calcular a acurária do treino
 preds_train = predict(nn,train_data,type = "class")
 # Calcular a acurácia do teste
 preds_teste = predict(nn,test_data,type = "class")
+
 # Train
 matrix_conf = table(preds_train, train_data$target)
-
 acertos = diag(as.matrix(matrix_conf))
-
 acc_train = sum(acertos)/length(preds_train)
+
 # Test
 matrix_conf = table(preds_teste, test_data$target)
-
 acertos = diag(as.matrix(matrix_conf))
-
 acc_test = sum(acertos)/length(preds_teste)
+
+modelprint(nn, test_data)
 
 # ============================================================================
 # Adicionar mais valores de custo e gamma para verificar qual melhor hiperparâmetro
