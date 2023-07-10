@@ -146,10 +146,10 @@ rfe_classifier$optVariables
 # Gráfico do número de variáveis
 ggplot(rfe_classifier)
 
-# Modelo SVM com 10 variáveis
+# Modelo SVM com 5 melhor variáveis
 set.seed(1)
-svm.fit =tune(svm, target ~ odor + spore.print.color + gill.size + stalk.shape + 
-                habitat,
+svm.fit =tune(svm, target ~ odor + spore.print.color + gill.size + gill.color + 
+                population,
               data = mushroom.train, 
               kernel = "radial", 
               ranges =list(cost =c(0.1, 1, 5, 10, 100),
@@ -173,15 +173,14 @@ confusionMatrix(data = as.factor(svm.pred), reference = mushroom.test$target)
 library("pROC")
 
 svm.pred.train = predict(svm.best, mushroom.train, decision.values=TRUE)
-# Não está funcionando corretamente, investigar
 
 roc(mushroom.train[, 1], as.numeric(as.factor(svm.pred.train)), plot=TRUE, print.auc = TRUE, legacy.axes=TRUE, main='ROC-Training Predication (SVM)')
 
 roc(mushroom.test[, 1], as.numeric(as.factor(svm.pred)), plot=TRUE, print.auc = TRUE, legacy.axes=TRUE, main='ROC-Testing Predication (SVM)')
 
 # Comparação com Naive Bayes
-nb.fit = naiveBayes(as.factor(target)~odor + spore.print.color + gill.size + stalk.shape + habitat + 
-                      population + cap.color + ring.number + stalk.root + ring.type, 
+nb.fit = naiveBayes(as.factor(target)~odor + spore.print.color + gill.size + gill.color + population + 
+                      stalk.root + habitat + stalk.surface.above.ring + cap.color + ring.type, 
                     data=mushroom.train)
 nb.fit
 
@@ -198,4 +197,4 @@ roc(mushroom.test[, 1], as.numeric(as.factor(nb.pred)), plot=TRUE, print.auc = T
 
 # ============================================================================
 # Interpretação dos modelos
-# 
+# Features importantes e global
