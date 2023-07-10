@@ -2,7 +2,8 @@
 suppressPackageStartupMessages(for (package in c('caret','readr','ggplot2',
                                                  'dplyr','corrplot','rpart',
                                                  'rpart.plot','randomForest',
-                                                 'utils','e1071','nnet')) {
+                                                 'utils','e1071','nnet', 'pROC',
+                                                 'naiveBayes')) {
   if (!require(package, character.only=T, quietly=T)) {
     install.packages(package)
     library(package,character.only=T)
@@ -75,8 +76,8 @@ table(mushroom$target)
 
 # ===========================================================================
 # Convertendo as variáveis categóricas para numéricas
-mushroom <- mushroom %>%
-  mutate(across(everything(), as.numeric))
+# mushroom <- mushroom %>%
+#   mutate(across(everything(), as.numeric))
 
 # Verificando a estrutura do dataframe após a transformação
 str(mushroom)
@@ -94,39 +95,6 @@ X_train <- train_data[, -ncol(train_data)]
 y_train <- train_data$target
 X_test <- test_data[, -ncol(test_data)]
 y_test <- test_data$target
-
-# ===========================================================================
-# Controle dos parâmetros para o treino
-# fitControl <- trainControl(method = "cv", number = 10)
-
-# ===========================================================================
-# Funções úteis
-# Visualiza os gráficos importantes
-plotROC <- function(actual_data, predicted_data) {
-  pROC_obj <- roc(as.integer(actual_data), as.integer(predicted_data),
-                  smoothed = TRUE,  direction="<",
-                  # arguments for ci
-                  ci=TRUE, ci.alpha=0.9, stratified=FALSE,
-                  # arguments for plot
-                  plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
-                  print.auc=TRUE, show.thres=TRUE)
-  sens.ci <- ci.se(pROC_obj)
-  plot(sens.ci, type="shape", col="lightblue")
-  plot(sens.ci, type="bars")
-}
-
-# Dados dos modelos importantes
-modelprint <- function(model, test_data) {
-  print("=========================================")
-  print(model)
-  print("=========================================")
-  print(varImp(model$net))
-  print("=========================================")
-  predictions <- predict(model, newdata = test_data, type = "class")
-  print(confusionMatrix(data = predictions, reference = test_data$target, positive='poisonous'))
-  print("=========================================")
-  plotROC(test_data$target, predictions)
-}
 
 # ============================================================================
 # Redes MLP
@@ -149,28 +117,85 @@ matrix_conf = table(preds_teste, test_data$target)
 acertos = diag(as.matrix(matrix_conf))
 acc_test = sum(acertos)/length(preds_teste)
 
-modelprint(nn, test_data)
-
 # ============================================================================
-# Adicionar mais valores de custo e gamma para verificar qual melhor hiperparâmetro
-
 # SVM
-model_svm <- svm(target ~.,data=train_data, cost=10,gamma = 0.0001,type = "C-classification")
+# Distribuição dos targets
+plyr::count(mushroom[ ,1])
 
-# Calcular a acurária do treino
-preds_train_svm <- predict(model_svm, train_data)
-# Calcular a acurária do teste
-preds_test_svm = predict(model_svm,test_data)
+# carregando o conjunto de dados "mushroom" e convertendo a coluna "class" para numérica
+mushroom.data <- mushroom
+mushroom.data$target <- as.numeric(mushroom.data$target) - 1
+head(mushroom.data$target)
 
-# Train
-matrix_conf_train_svm <- table(preds_train_svm, train_data$target)
-acertos_svm_train <- diag(as.matrix(matrix_conf_train_svm))
-acc_train_svm <- sum(acertos_svm_train)/length(preds_train_svm)
+# Divisão do train e test
+set.seed(42)
+mushroom.train = mushroom%>%
+  sample_frac(0.6)
+mushroom.test = mushroom%>%
+  setdiff(mushroom.train)
 
-# Test
-matrix_conf_test_svm = table(preds_test_svm, test_data$target)
-acertos_svm_test = diag(as.matrix(matrix_conf_test_svm))
-acc_test_svm = sum(acertos_svm_test)/length(preds_test_svm)
+# Seleção das features mais importantes usando RFE
+rfe_classifier <- rfe(x=mushroom.train[, -1], y=mushroom.train$target,
+                      size=c(5, 10, 15, 20, 25), 
+                      rfeControl = rfeControl(functions = rfFuncs))
+rfe_classifier
+
+# Features 
+rfe_classifier$optVariables
+
+# Gráfico do número de variáveis
+ggplot(rfe_classifier)
+
+# Modelo SVM com 10 variáveis
+set.seed(1)
+svm.fit =tune(svm, target ~ odor + spore.print.color + gill.size + stalk.shape + 
+                habitat,
+              data = mushroom.train, 
+              kernel = "radial", 
+              ranges =list(cost =c(0.1, 1, 5, 10, 100),
+                           gamma = c(0.5,1,2,3,4))
+)
+
+summary(svm.fit)
+
+# Executando o modelo com os melhores parâmetros
+svm.best = svm.fit$best.model
+summary(svm.best)
+
+# Predição
+svm.pred <- predict(svm.best, newdata=mushroom.test)
+#svm.pred <- ifelse(svm.pred > 0.5, 'p', 'e')
+
+# Matriz de confusão
+confusionMatrix(data = as.factor(svm.pred), reference = mushroom.test$target)
+
+#Área sob a Curva ROC
+library("pROC")
+
+svm.pred.train = predict(svm.best, mushroom.train, decision.values=TRUE)
+# Não está funcionando corretamente, investigar
+
+roc(mushroom.train[, 1], as.numeric(as.factor(svm.pred.train)), plot=TRUE, print.auc = TRUE, legacy.axes=TRUE, main='ROC-Training Predication (SVM)')
+
+roc(mushroom.test[, 1], as.numeric(as.factor(svm.pred)), plot=TRUE, print.auc = TRUE, legacy.axes=TRUE, main='ROC-Testing Predication (SVM)')
+
+# Comparação com Naive Bayes
+nb.fit = naiveBayes(as.factor(target)~odor + spore.print.color + gill.size + stalk.shape + habitat + 
+                      population + cap.color + ring.number + stalk.root + ring.type, 
+                    data=mushroom.train)
+nb.fit
+
+nb.pred <- predict(nb.fit, mushroom.test)
+
+confusionMatrix(data = as.factor(nb.pred), reference = as.factor(mushroom.test$target))
+
+nb.pred.train = predict(nb.fit, mushroom.train, decision.values=TRUE)
+
+roc(mushroom.train[, 1], as.numeric(as.factor(nb.pred.train)), plot=TRUE, print.auc = TRUE, legacy.axes=TRUE, main='ROC-Training Predication (NB)')
+
+roc(mushroom.test[, 1], as.numeric(as.factor(nb.pred)), plot=TRUE, print.auc = TRUE, legacy.axes=TRUE, main='ROC-Testing Predication (NB)')
+
+
 # ============================================================================
 # Interpretação dos modelos
 # 
